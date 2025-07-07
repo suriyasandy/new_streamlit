@@ -1,3 +1,7 @@
+import requests
+import streamlit as st
+from config.trade_config import TRADE_ENVIRONMENTS
+
 class TradeDataDownloader:
     def __init__(self, product_type, legal_entity, source_system, start_date, end_date, env):
         self.product_type = product_type
@@ -5,8 +9,58 @@ class TradeDataDownloader:
         self.source_system = source_system
         self.start_date = start_date
         self.end_date = end_date
-        self.env = env  # "UAT" or "PROD"
+        self.env = env
+        self.env_config = TRADE_ENVIRONMENTS[env]
+        self.token = None
+        self.downloaded = False
+
+    def authenticate(self):
+        payload = {
+            "username": self.env_config["username"],
+            "password": self.env_config["password"]
+        }
+        headers = {
+            "Origin": self.env_config["origin"],
+            "Referer": self.env_config["referer"]
+        }
+        try:
+            res = requests.post(self.env_config["auth_url"], json=payload, headers=headers)
+            res.raise_for_status()
+            self.token = res.json().get("access_token")
+            return True
+        except Exception as e:
+            st.error(f"❌ {self.env} Auth failed for {self.legal_entity}-{self.source_system}: {e}")
+            return False
 
     def download(self):
-        # Placeholder: replace with requests logic
-        print(f"[TRADE] {self.env}: {self.legal_entity} | {self.source_system} | {self.product_type} from {self.start_date} to {self.end_date}")
+        st.info(f"🔄 Starting download for {self.env}: {self.legal_entity} | {self.source_system}")
+        
+        if not self.authenticate():
+            return
+
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Origin": self.env_config["origin"],
+            "Referer": self.env_config["referer"]
+        }
+
+        params = {
+            "productType": self.product_type,
+            "legalEntity": self.legal_entity,
+            "sourceSystem": self.source_system,
+            "startDate": self.start_date.strftime("%Y-%m-%d"),
+            "endDate": self.end_date.strftime("%Y-%m-%d")
+        }
+
+        try:
+            response = requests.get(self.env_config["data_url"], headers=headers, params=params)
+            response.raise_for_status()
+
+            # Simulate save (or just store status for now)
+            if response.status_code == 200 and response.content:
+                self.downloaded = True
+                st.success(f"✅ Downloaded from {self.env}: {self.legal_entity} | {self.source_system}")
+            else:
+                st.warning(f"⚠️ No data returned from {self.env}: {self.legal_entity} | {self.source_system}")
+        except Exception as e:
+            st.error(f"❌ Download failed for {self.env}: {e}")
