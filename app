@@ -1,6 +1,7 @@
 import streamlit as st
 from ui.layout import AppLayout
 from core.download_manager import DataDownloader
+from core.matcher import TradeDataMatcher
 
 def main():
     st.set_page_config(page_title="Trade & Exception Data Downloader", layout="wide")
@@ -20,3 +21,13 @@ def main():
         downloader.run_parallel_download()
     elif run:
         st.warning("Please select at least one legal entity and one source system.")
+
+    # After downloader.run_parallel_download()
+    matcher = TradeDataMatcher()
+    matched = matcher.match_files()
+    
+    if matched:
+        st.success(f"✅ {len(matched)} matched files created in `downloads/MATCHED`")
+    else:
+        st.warning("⚠️ No matching records found between UAT and PROD files.")
+
