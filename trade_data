@@ -1,12 +1,12 @@
 class TradeDataDownloader:
-    def __init__(self, product_type, legal_entity, source_system, start_date, end_date):
+    def __init__(self, product_type, legal_entity, source_system, start_date, end_date, env):
         self.product_type = product_type
         self.legal_entity = legal_entity
         self.source_system = source_system
         self.start_date = start_date
         self.end_date = end_date
-        # self.auth_url, self.data_url, etc., can be set here
+        self.env = env  # "UAT" or "PROD"
 
     def download(self):
-        # Placeholder: implement UAT & PROD download logic using requests
-        print(f"[TRADE] Downloading trade data for {self.legal_entity} - {self.product_type}")
+        # Placeholder: replace with requests logic
+        print(f"[TRADE] {self.env}: {self.legal_entity} | {self.source_system} | {self.product_type} from {self.start_date} to {self.end_date}")
