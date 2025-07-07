@@ -1,0 +1,20 @@
+def get_auth_token(self, env):
+    from config.trade_config import TRADE_ENVIRONMENTS
+    config = TRADE_ENVIRONMENTS[env]
+
+    payload = {
+        "username": config["username"],
+        "password": config["password"]
+    }
+    headers = {
+        "Origin": config["origin"],
+        "Referer": config["referer"]
+    }
+
+    try:
+        res = requests.post(config["auth_url"], json=payload, headers=headers)
+        res.raise_for_status()
+        return res.json().get("access_token")
+    except Exception as e:
+        st.error(f"❌ Auth failed for {env}: {e}")
+        return None
