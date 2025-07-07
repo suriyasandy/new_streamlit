@@ -1,6 +1,7 @@
 import requests
 import streamlit as st
 from config.trade_config import TRADE_ENVIRONMENTS
+from datetime import timedelta
 
 class TradeDataDownloader:
     def __init__(self, product_type, legal_entity, source_system, start_date, end_date, env):
@@ -12,7 +13,7 @@ class TradeDataDownloader:
         self.env = env
         self.env_config = TRADE_ENVIRONMENTS[env]
         self.token = None
-        self.downloaded = False
+        self.download_count = 0
 
     def authenticate(self):
         payload = {
@@ -34,9 +35,9 @@ class TradeDataDownloader:
 
     def download(self):
         st.info(f"🔄 Starting download for {self.env}: {self.legal_entity} | {self.source_system}")
-        
+
         if not self.authenticate():
-            return
+            return 0  # No files downloaded
 
         headers = {
             "Authorization": f"Bearer {self.token}",
@@ -44,23 +45,28 @@ class TradeDataDownloader:
             "Referer": self.env_config["referer"]
         }
 
-        params = {
-            "productType": self.product_type,
-            "legalEntity": self.legal_entity,
-            "sourceSystem": self.source_system,
-            "startDate": self.start_date.strftime("%Y-%m-%d"),
-            "endDate": self.end_date.strftime("%Y-%m-%d")
-        }
+        current_date = self.start_date
+        while current_date <= self.end_date:
+            params = {
+                "productType": self.product_type,
+                "legalEntity": self.legal_entity,
+                "sourceSystem": self.source_system,
+                "startDate": current_date.strftime("%Y-%m-%d"),
+                "endDate": current_date.strftime("%Y-%m-%d")
+            }
+            try:
+                response = requests.get(self.env_config["data_url"], headers=headers, params=params)
+                response.raise_for_status()
+                
+                if response.status_code == 200 and response.content:
+                    self.download_count += 1
+                    st.success(f"✅ Downloaded for {current_date} ({self.env}, {self.legal_entity}, {self.source_system})")
+                else:
+                    st.warning(f"⚠️ No data for {current_date} ({self.env}, {self.legal_entity})")
 
-        try:
-            response = requests.get(self.env_config["data_url"], headers=headers, params=params)
-            response.raise_for_status()
+            except Exception as e:
+                st.error(f"❌ Failed for {current_date} - {e}")
+            
+            current_date += timedelta(days=1)
 
-            # Simulate save (or just store status for now)
-            if response.status_code == 200 and response.content:
-                self.downloaded = True
-                st.success(f"✅ Downloaded from {self.env}: {self.legal_entity} | {self.source_system}")
-            else:
-                st.warning(f"⚠️ No data returned from {self.env}: {self.legal_entity} | {self.source_system}")
-        except Exception as e:
-            st.error(f"❌ Download failed for {self.env}: {e}")
+        return self.download_count
