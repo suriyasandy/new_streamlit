@@ -1,0 +1,10 @@
+class ExceptionDataDownloader:
+    def __init__(self, legal_entity, start_date, end_date):
+        self.legal_entity = legal_entity
+        self.start_date = start_date
+        self.end_date = end_date
+        # self.client_id, self.client_secret, etc.
+
+    def download(self):
+        # Placeholder: implement actual logic
+        print(f"[EXCEPTION] Downloading exception data for {self.legal_entity} from {self.start_date} to {self.end_date}")
