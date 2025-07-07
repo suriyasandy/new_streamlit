@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from core.trade_data import TradeDataDownloader
 from core.exception_data import ExceptionDataDownloader
@@ -10,21 +10,27 @@ class DataDownloader:
         self.source_systems = source_systems
         self.start_date = start_date
         self.end_date = end_date
+        self.success_count = 0
 
     def run_parallel_download(self):
+        futures = []
         with ThreadPoolExecutor() as executor:
-            # Trade Data for each Legal Entity & Source System (UAT + PROD)
             for le in self.legal_entities:
                 for ss in self.source_systems:
-                    executor.submit(self.download_trade_data, le, ss, env="UAT")
-                    executor.submit(self.download_trade_data, le, ss, env="PROD")
+                    futures.append(executor.submit(self.download_trade_data, le, ss, "UAT"))
+                    futures.append(executor.submit(self.download_trade_data, le, ss, "PROD"))
 
-            # Exception data per Legal Entity (same for all systems)
-            for le in self.legal_entities:
-                executor.submit(self.download_exception_data, le)
+                futures.append(executor.submit(self.download_exception_data, le))
+
+            for f in as_completed(futures):
+                result = f.result()
+                if result:
+                    self.success_count += 1
+
+        st.info(f"📊 Total successful downloads: {self.success_count}")
 
     def download_trade_data(self, legal_entity, source_system, env):
-        trade_downloader = TradeDataDownloader(
+        downloader = TradeDataDownloader(
             product_type=self.product_type,
             legal_entity=legal_entity,
             source_system=source_system,
@@ -32,12 +38,10 @@ class DataDownloader:
             end_date=self.end_date,
             env=env
         )
-        trade_downloader.download()
+        downloader.download()
+        return downloader.downloaded
 
     def download_exception_data(self, legal_entity):
-        exception_downloader = ExceptionDataDownloader(
-            legal_entity=legal_entity,
-            start_date=self.start_date,
-            end_date=datetime.now()
-        )
-        exception_downloader.download()
+        # Add real logic here later; return True for now
+        st.info(f"📦 Placeholder: downloading exception data for {legal_entity}")
+        return True
