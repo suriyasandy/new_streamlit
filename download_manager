@@ -4,32 +4,40 @@ from core.trade_data import TradeDataDownloader
 from core.exception_data import ExceptionDataDownloader
 
 class DataDownloader:
-    def __init__(self, product_type, legal_entity, source_system, start_date, end_date):
+    def __init__(self, product_type, legal_entities, source_systems, start_date, end_date):
         self.product_type = product_type
-        self.legal_entity = legal_entity
-        self.source_system = source_system
+        self.legal_entities = legal_entities
+        self.source_systems = source_systems
         self.start_date = start_date
         self.end_date = end_date
 
     def run_parallel_download(self):
         with ThreadPoolExecutor() as executor:
-            executor.submit(self.download_trade_data)
-            executor.submit(self.download_exception_data)
+            # Trade Data for each Legal Entity & Source System (UAT + PROD)
+            for le in self.legal_entities:
+                for ss in self.source_systems:
+                    executor.submit(self.download_trade_data, le, ss, env="UAT")
+                    executor.submit(self.download_trade_data, le, ss, env="PROD")
 
-    def download_trade_data(self):
+            # Exception data per Legal Entity (same for all systems)
+            for le in self.legal_entities:
+                executor.submit(self.download_exception_data, le)
+
+    def download_trade_data(self, legal_entity, source_system, env):
         trade_downloader = TradeDataDownloader(
             product_type=self.product_type,
-            legal_entity=self.legal_entity,
-            source_system=self.source_system,
+            legal_entity=legal_entity,
+            source_system=source_system,
             start_date=self.start_date,
-            end_date=self.end_date
+            end_date=self.end_date,
+            env=env
         )
         trade_downloader.download()
 
-    def download_exception_data(self):
+    def download_exception_data(self, legal_entity):
         exception_downloader = ExceptionDataDownloader(
-            legal_entity=self.legal_entity,
+            legal_entity=legal_entity,
             start_date=self.start_date,
-            end_date=datetime.now()  # current datetime
+            end_date=datetime.now()
         )
         exception_downloader.download()
