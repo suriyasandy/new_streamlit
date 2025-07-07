@@ -1,0 +1,77 @@
+import os
+import requests
+import pandas as pd
+from datetime import datetime
+import streamlit as st
+
+class EPEDataDownloader:
+    def __init__(self, legal_entity, start_date, end_date, client_id, client_secret):
+        self.legal_entity = legal_entity
+        self.start_date = start_date
+        self.end_date = end_date
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.token = None
+
+        # Replace with your actual endpoints
+        self.auth_url = "https://epe.example.com/auth"
+        self.data_url = "https://epe.example.com/data"
+
+        self.output_dir = "downloads/EPE"
+        os.makedirs(self.output_dir, exist_ok=True)
+
+    def authenticate(self):
+        payload = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret
+        }
+
+        try:
+            res = requests.post(self.auth_url, json=payload)
+            res.raise_for_status()
+            self.token = res.json().get("access_token")
+
+            if not self.token:
+                raise ValueError("No access_token in response")
+
+            return True
+        except Exception as e:
+            st.error(f"❌ EPE Auth failed for {self.legal_entity}: {e}")
+            return False
+
+    def download(self):
+        st.info(f"🔄 Downloading EPE data for {self.legal_entity} from {self.start_date} to {self.end_date}")
+
+        if not self.authenticate():
+            return False
+
+        headers = {
+            "Authorization": f"Bearer {self.token}"
+        }
+
+        params = {
+            "legalEntity": self.legal_entity,
+            "startDate": self.start_date.strftime("%Y-%m-%d"),
+            "endDate": self.end_date.strftime("%Y-%m-%d")
+        }
+
+        try:
+            res = requests.get(self.data_url, headers=headers, params=params)
+            res.raise_for_status()
+
+            df = pd.DataFrame(res.json()) if res.headers.get("Content-Type", "").startswith("application/json") \
+                 else pd.read_csv(pd.compat.StringIO(res.text))  # fallback for CSV
+
+            if not df.empty:
+                filename = f"{self.start_date.strftime('%Y-%m-%d')}_{self.end_date.strftime('%Y-%m-%d')}_{self.legal_entity}.csv"
+                file_path = os.path.join(self.output_dir, filename)
+                df.to_csv(file_path, index=False)
+                st.success(f"✅ EPE data saved: {file_path}")
+                return True
+            else:
+                st.warning(f"⚠️ No EPE data returned for {self.legal_entity}")
+                return False
+
+        except Exception as e:
+            st.error(f"❌ EPE download failed: {e}")
+            return False
