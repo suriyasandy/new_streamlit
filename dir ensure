@@ -1,0 +1,13 @@
+import os
+
+def ensure_dir_exists(full_path):
+    """
+    Ensure the full directory path exists.
+    If already exists, skip creation.
+    If not, create all missing parent/subdirectories.
+    """
+    try:
+        os.makedirs(full_path, exist_ok=True)
+        print(f"Directory ready: {full_path}")
+    except Exception as e:
+        print(f"Failed to create directory: {full_path} - Error: {e}")
