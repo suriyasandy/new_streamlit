@@ -21,3 +21,43 @@ class AppLayout:
         if st.sidebar.button("Download Data"):
             return product_type, legal_entities, source_systems, start_date, end_date, True
         return None, [], [], None, None, False
+
+
+import streamlit as st
+import pandas as pd
+
+class AppLayout:
+    def __init__(self):
+        self.threshold_df = None
+
+    def threshold_input_section(self):
+        st.header("📈 Threshold Configuration")
+
+        uploaded_file = st.file_uploader("Upload Threshold File (.csv)", type="csv")
+        threshold_type = st.radio("Select Threshold Type", ["Group-wise", "Currency-wise"])
+
+        if uploaded_file:
+            try:
+                df = pd.read_csv(uploaded_file)
+                self.threshold_df = df
+                st.success("✅ Threshold file uploaded successfully")
+
+                # Auto-filter
+                if threshold_type == "Group-wise" and "Group" in df.columns:
+                    filtered = df[df["Group"].notna()]
+                elif threshold_type == "Currency-wise" and "Currency" in df.columns:
+                    filtered = df[df["Currency"].notna()]
+                else:
+                    st.warning("⚠️ Required column not found in file")
+                    return None
+
+                st.subheader(f"{threshold_type} Thresholds")
+                st.dataframe(filtered)
+
+                return filtered, threshold_type
+            except Exception as e:
+                st.error(f"❌ Failed to read file: {e}")
+                return None
+        else:
+            st.info("📤 Please upload a threshold file to proceed")
+            return None
