@@ -10,8 +10,8 @@ class TradeDataMatcher:
 
     def match_files(self):
         matched_files = []
+        key_columns = ["TradeID", "TradeDate", "Instrument"]  # ✅ update if needed
 
-        # Loop over UAT files
         for filename in os.listdir(self.uat_dir):
             if not filename.endswith(".csv"):
                 continue
@@ -23,20 +23,26 @@ class TradeDataMatcher:
                 df_uat = pd.read_csv(uat_file)
                 df_prod = pd.read_csv(prod_file)
 
-                # 👇 Replace these with actual join columns
-                join_cols = ["TradeID", "TradeDate", "Instrument"]
+                if all(col in df_uat.columns and col in df_prod.columns for col in key_columns):
+                    # Ensure same types
+                    df_uat[key_columns] = df_uat[key_columns].astype(str)
+                    df_prod[key_columns] = df_prod[key_columns].astype(str)
 
-                if all(col in df_uat.columns and col in df_prod.columns for col in join_cols):
-                    df_matched = pd.merge(df_uat, df_prod, on=join_cols, suffixes=("_uat", "_prod"))
-                    
+                    # Filter UAT rows that exist in PROD
+                    df_matched = df_uat.merge(
+                        df_prod[key_columns].drop_duplicates(),
+                        on=key_columns,
+                        how='inner'
+                    )
+
                     if not df_matched.empty:
                         output_file = os.path.join(self.output_dir, filename)
                         df_matched.to_csv(output_file, index=False)
                         matched_files.append(output_file)
-                        print(f"✅ Matched file created: {output_file}")
+                        print(f"✅ Matched UAT rows saved: {output_file}")
                     else:
-                        print(f"⚠️ No matching records in: {filename}")
+                        print(f"⚠️ No matching UAT rows in {filename}")
                 else:
-                    print(f"❌ Missing join columns in {filename}")
+                    print(f"❌ Missing key columns in {filename}")
 
         return matched_files
