@@ -1,0 +1,18 @@
+TRADE_ENVIRONMENTS = {
+    "UAT": {
+        "auth_url": "https://uat.example.com/auth",
+        "data_url": "https://uat.example.com/trade",
+        "username": "uat_user",
+        "password": "uat_pass",
+        "origin": "https://uat.origin.com",
+        "referer": "https://uat.referer.com"
+    },
+    "PROD": {
+        "auth_url": "https://prod.example.com/auth",
+        "data_url": "https://prod.example.com/trade",
+        "username": "prod_user",
+        "password": "prod_pass",
+        "origin": "https://prod.origin.com",
+        "referer": "https://prod.referer.com"
+    }
+}
