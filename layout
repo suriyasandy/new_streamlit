@@ -1,16 +1,23 @@
 import streamlit as st
+from datetime import date
 
 class AppLayout:
     def render_filters(self):
         st.sidebar.header("🔍 Filter Options")
 
         product_type = st.sidebar.selectbox("Select Product Type", ["FX", "Equities", "Bonds"])
-        legal_entity = st.sidebar.selectbox("Select Legal Entity", ["HBSG", "LLOYD", "DB"])
-        source_system = st.sidebar.selectbox("Select Source System", ["GMI", "MUREX", "SUMMIT"])
-        start_date = st.sidebar.date_input("Start Date")
-        end_date = st.sidebar.date_input("End Date")
+        
+        legal_entities = st.sidebar.multiselect(
+            "Select Legal Entity(s)", ["HBSG", "LLOYD", "DB"]
+        )
+
+        source_systems = st.sidebar.multiselect(
+            "Select Source System(s)", ["GMI", "MUREX", "SUMMIT"]
+        )
+
+        start_date = st.sidebar.date_input("Start Date", value=date(2024, 1, 1))
+        end_date = st.sidebar.date_input("End Date", value=date.today())
 
         if st.sidebar.button("Download Data"):
-            return product_type, legal_entity, source_system, start_date, end_date, True
-        return None, None, None, None, None, False
-
+            return product_type, legal_entities, source_systems, start_date, end_date, True
+        return None, [], [], None, None, False
